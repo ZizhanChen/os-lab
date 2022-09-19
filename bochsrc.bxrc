@@ -1,0 +1,17 @@
+romimage: file=/home/csci3150/Documents/bochs/BIOS-bochs-latest
+megs: 16
+vgaromimage: file=/home/csci3150/Documents/bochs/VGABIOS-lgpl-latest
+floppya: 1_44="/home/csci3150/Documents/os/Image", status=inserted
+boot: a
+log: /home/csci3150/Documents/bochs/bochsout.txt
+#parport1: enable=0
+vga_update_interval: 300000
+keyboard_serial_delay: 200
+keyboard_paste_delay: 100000
+#floppy_command_delay: 50000
+cpu: count=1, ips=4000000
+mouse: enabled=0
+private_colormap: enabled=0
+fullscreen: enabled=0
+screenmode: name="sample"
+i440fxsupport: enabled=0

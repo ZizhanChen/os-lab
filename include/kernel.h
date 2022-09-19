@@ -1,6 +1,7 @@
 #ifndef _KERNEL_H
 #define _KERNEL_H
 #include "type.h"
+#include "proto.h"
 /* system descriptor */
 typedef struct s_descriptor		/* totally 8 byte */
 {
@@ -60,17 +61,44 @@ typedef struct s_tss {
 
 extern DESCRIPTOR gdt[256];
 extern GATE idt[256];
+extern u32 init_stack;
 extern TSS tss0;
-extern TSS tss1;
 extern DESCRIPTOR ldt0[3];
 extern u32 stack0_krn_ptr;
 extern u32 stack1_krn_ptr;
 extern u32 new_task_next_ip;
 
+
 #define syscall_char_printer(my_char) \
 __asm__ ("int $0x80" \
 	: \
 	: "a"(my_char))
+
+#define syscall_tty_routine() \
+__asm__ ("int $0x81" \
+	: \
+	: )
+
+#define syscall_write(buf, len) \
+__asm__ ("int $0x82" \
+	: \
+	: "a"(buf), "b"(len))
+
+#define syscall_printx(buf) \
+__asm__ ("int $0x83" \
+	: \
+	: "a"(buf))
+
+#define syscall_sendrec(func, src_dest, p_msg) \
+__asm__ ("int $0x84" \
+	: \
+	: "a"(func), "b"(src_dest), "c"(p_msg))
+
+#define syscall_int_printer(my_int) \
+__asm__ ("int $0x85" \
+	: \
+	: "a"(my_int))
+
 
 
 void init_descriptor(DESCRIPTOR * p_desc, u32 base, u32 limit, u16 attribute);

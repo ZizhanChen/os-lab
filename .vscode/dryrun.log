@@ -1,0 +1,11 @@
+make --dry-run --keep-going --print-directory
+make: Entering directory '/home/zizhan/Documents/simple-schedule-simplified'
+cc  -m elf_i386 -Ttext 0xC0010000 -e startup_32 -s -x -M    boot/boot.s   -o boot/boot
+cc    -c -o kernel/mytask.o kernel/mytask.c
+cc -m elf_i386 -Ttext 0xC0010000 -e startup_32 -s -x -M    kernel/mytask.o   -o kernel/mytask
+ 
+make: *** No rule to make target 'kernel/system', needed by 'Image'.
+
+cc   -m elf_i386 -Ttext 0xC0010000 -e startup_32 -s -x -M    kernel/mytask1.c   -o kernel/mytask1
+make: Leaving directory '/home/zizhan/Documents/simple-schedule-simplified'
+ 

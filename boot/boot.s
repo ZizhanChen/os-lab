@@ -3,7 +3,7 @@
 ! It then loads the system at 0x10000, using BIOS interrupts. Thereafter
 ! it disables all interrupts, changes to protected mode, and calls the 
 ! start of system. System then must RE-initialize the protected mode in
-! it's own tables, and enable interrupts as needed.
+! its own tables, and enable interrupts as needed.
 
 BOOTSEG = 0x07c0
 SYSSEG  = 0x1000			! system loaded at 0x10000 (65536).

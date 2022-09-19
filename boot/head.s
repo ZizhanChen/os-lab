@@ -5,14 +5,23 @@ KRN_BASE 	= 0x10000
 SCRN_SEL	= 0x18
 LDT0_SEL	= 0x20
 TSS0_SEL	= 0x28
-TSS1_SEL	= 0X30
-#LDT1_SEL	= 0x38
 PAGE_OFFSET = 0xC0000000
+
+.extern tty_routine
+.extern write_char_routine
+.extern sys_write
+.extern sys_printx
+.extern sys_sendrec
+.extern sys_getticks
+
+.extern current
 
 .global startup_32
 .global move_to_user_mode, systemcall_interrupt, timer_interrupt,set_cr3_test
 .global idt,gdt,tss0,ldt0,pg_dir,pg0,pg1,pg2,pg3,stack0_krn_ptr,stack0_ptr,myjump,finish_paging,set_cr3
 .global pg0_task1,pg1_task1,setup_paging,pg_dir_task1,before_task1_paging,tss1,stack1_ptr,stack1_krn_ptr,pg0_task0, pg_dir_task0, new_task_next_ip
+.global keyboard_interrupt, systemcall_interrupt_1, systemcall_interrupt_2, systemcall_interrupt_3, systemcall_interrupt_4, systemcall_interrupt_5
+.global write_char
 
 .text
 startup_32:
@@ -84,6 +93,11 @@ move_to_user_mode:
 	andb $0xfe, %al
 	outb %al, %dx
 
+	movl $0x21, %edx
+	inb %dx, %al
+	andb $0xfd, %al
+	outb %al, %dx
+
 	pushfl
 	andl $0xffffbfff, (%esp)
 	popfl
@@ -136,7 +150,97 @@ systemcall_interrupt:
 	pushl %eax
 	movl $0x10,%edx
 	mov %dx,%ds
-	call write_char
+	call write_char_routine
+	popl %eax
+	popl %ebx
+	popl %ecx
+	popl %edx
+	pop %ds
+	
+	iret
+
+systemcall_interrupt_1:
+
+	push %ds
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	pushl %eax
+	movl $0x10,%edx
+	mov %dx,%ds
+	call tty_routine
+	popl %eax
+	popl %ebx
+	popl %ecx
+	popl %edx
+	pop %ds
+	
+	iret
+
+systemcall_interrupt_2:
+
+	push %ds
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	pushl %eax
+	movl $0x10,%edx
+	mov %dx,%ds
+	call sys_write
+	popl %eax
+	popl %ebx
+	popl %ecx
+	popl %edx
+	pop %ds
+	
+	iret
+
+systemcall_interrupt_3:
+
+	push %ds
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	pushl %eax
+	movl $0x10,%edx
+	mov %dx,%ds
+	call sys_printx
+	popl %eax
+	popl %ebx
+	popl %ecx
+	popl %edx
+	pop %ds
+	
+	iret
+
+systemcall_interrupt_4:
+
+	push %ds
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	pushl %eax
+	movl $0x10,%edx
+	mov %dx,%ds
+	call sys_sendrec
+	popl %eax
+	popl %ebx
+	popl %ecx
+	popl %edx
+	pop %ds
+	
+	iret
+
+systemcall_interrupt_5:
+
+	push %ds
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	pushl %eax
+	movl $0x10,%edx
+	mov %dx,%ds
+	call sys_write_int_routine
 	popl %eax
 	popl %ebx
 	popl %ecx
@@ -158,23 +262,37 @@ timer_interrupt:
 	outb %al, $0x20
 
 	call schedule_new
-new_task_next_ip:
-	movl $0x17, %eax
-	mov %ax, %es
-	mov %ax, %fs
-	mov %ax, %gs
 
 	popl %eax
 	popl %ebx
 	popl %ecx
 	popl %edx	
 	pop %ds
+new_task_next_ip:
+	iret
+
+keyboard_interrupt:
+	push %ds
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	pushl %eax
+	movl $0x10,%edx
+	mov %dx,%ds
+	movb $0x20, %al
+	outb %al, $0x20
+	call keyboard_handler
+	popl %eax
+	popl %ebx
+	popl %ecx
+	popl %edx
+	pop %ds
+	
 	iret
 
 
-
 /*******************/
-#current:.long 0
+
 scr_loc:.long 0
 
 
@@ -200,7 +318,7 @@ idt:	.fill 256,8,0		# idt is uninitialized
 gdt:	.quad 0x0000000000000000	/* NULL descriptor */
 	.quad 0x00cf9a000000ffff	/* 4GB 0x08, base = 0x0000 */
 	.quad 0x00cf92000000ffff	/* 4Gb 0x10 */
-	.quad 0x00c0920b80000002	/* screen 0x18 - for display */
+	.quad 0x00c0920b80000008	/* screen 0x18 - for display */
 	.fill 254,4,0
 end_gdt:
 
@@ -231,19 +349,7 @@ tss0:
 	.long LDT0_SEL			/* ldt */
 	.long 0x8000000			/* trace bitmap */
 
-tss1:
-	.long 0 			/* back link */
-	.long stack1_krn_ptr, 0x10	/* esp0, ss0 */
-	.long 0, 0			/* esp1, ss1 */
-	.long 0, 0			/* esp2, ss2 */
-	.long pg_dir_task1-PAGE_OFFSET				/* cr3 */
-	.long 0			/* eip */
-	.long 0x200			/* eflags */
-	.long 0, 0, 0, 0		/* eax, ecx, edx, ebx */
-	.long 0x10000, 0, 0, 0	/* esp, ebp, esi, edi */
-	.long 0x17,0x0f,0x17,0x17,0x17,0x17 /* es, cs, ss, ds, fs, gs */
-	.long LDT0_SEL			/* ldt */
-	.long 0x8000000			/* trace bitmap */
+
 
 # kernel stack for task0
 	.fill 128,4,0
@@ -252,11 +358,6 @@ stack0_krn_ptr:
 
 # kernel stack for task1
 	.fill 123,4,0
-	.long 0x0
-	.long 0x0
-	.long 0x0
-	.long 0x0
-	.long 0x17
 	.long 0x0
 	.long 0x0f
 	.long 0x00000200
@@ -276,19 +377,15 @@ pg0:
 pg1:
 
 .org 0x5000
-
 pg_dir_task0:
 
 .org 0x6000
-
 pg0_task0:
 
 .org 0x7000
-
 pg_dir_task1:
 
 .org 0x8000
-
 pg0_task1:
 
 .org 0x9000
